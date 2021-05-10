@@ -1,34 +1,11 @@
 const User = require('../models/User');
-const passport = require('passport');
+const bcrypt = require('bcrypt');
 
 exports.handleLogin = async (req, res, next) => {
     console.log('login()');
     console.log(req.body);
-
-    passport.authenticate('local',
-        (err, user, info) => {
-            if (err) {
-                console.log('err');
-                return next(err);
-            }
-
-            if (!user) {
-                console.log('!user');
-                return res.status(200).json(info);
-                // return res.redirect('login?info=' + info);
-            }
-
-            console.log('ok');
-            // req.logIn(user, function (err) {
-            //     if (err) {
-            //         return next(err);
-            //     }
-
-            //     return res.redirect('/');
-            // });
-
-        })(req, res, next);
-
+    const result = await User.find({});
+    return res.status(200).json(result);
 }
 
 exports.handleRegister = async (req, res, next) => {
@@ -36,16 +13,36 @@ exports.handleRegister = async (req, res, next) => {
     console.log(req.body);
 
     //check for duplicates
-     const {email, password} = req.body;
+    const {email, password} = req.body;
 
-    const newUser = new User({email, password});
-    newUser.save((err, result) => {
+    if (!email || !password) {
+        console.log('empty email or password');
+        return;
+    }
+
+    bcrypt.hash(password, 10, (err, hash) => {
         if (err) {
             console.log(err);
             return;
         }
-        console.log('success');
-        console.log(result);
-        return;
+        
+        // Store hash in your password DB.
+        const newUser = new User({ email, hash });
+        
+        newUser.save((err, result) => {
+            if (err) {
+                console.log(err);
+                return;
+            }
+            console.log('success');
+            console.log(result);
+            return;
+        });
     });
+}
+
+exports.handleLogout = async (req, res, next) => {
+    console.log('logout()');
+    console.log(req.body);
+    return req.status(200).json({});
 }

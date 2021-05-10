@@ -4,11 +4,19 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const redis = require('redis');
 const passport = require('passport');
+const LocalStrategy = require("passport-local").Strategy;
 const cors = require('cors');
-const routesHandler = require('./routes');
+const { dbConnect } = require('./db');
 const User = require('./models/User');
+// const config = require('dotenv').config();
 
+// const routes = require('./routes')(passport);
 const app = express();
+dbConnect();
+// require('./config/passport')(passport);
+
+// console.log(config);
+
 //redis
 // const redisStore = require('connect-redis')(session);
 // const redisClient = redis.createClient();
@@ -20,43 +28,49 @@ const sessionOptions = {
     cookie: { maxAge: 60 * 60 * 1000 } // 1 hour
 };
 
-// app.use(session({ 
-//     secret: 'dog cat', 
-//     saveUninitialized: true, 
-//     resave: true,
-//     store: new redisStore({ 
-//         host: 'localhost', 
-//         port: 6379, 
-//         client: redisClient,
-//         ttl: 260 
-//     }),
-// }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+
 app.use(session(sessionOptions));
-app.use(passport.initialize());
-app.use(passport.session());
 
-// Passport Local Strategy
-passport.use(User.createStrategy());
-
-// To use with sessions
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-
-//auth
+//auth route
 app.use('*', (req, res, next) => {
     console.log('base route catch');
     next();
 })
 
-app.use('/api', routesHandler);
+// Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser(function (user, done) {
+    done(null, user._id);
+});
+
+passport.deserializeUser(function (userId, done) {
+    User.findById(userId, (err, user) => done(err, user));
+});
+
+// Passport Local
+const local = new LocalStrategy((email, password, done) => {
+    User.findOne({ email })
+        .then(user => {
+            if (!user || !user.validPassword(password)) {
+                done(null, false, { message: "Invalid username/password" });
+            } else {
+                done(null, user);
+            }
+        })
+        .catch(e => done(e));
+});
+passport.use("local", local);
+
+// Routes
+
+app.use('/api', require('./routes')(passport));
 
 app.listen(process.env.PORT || 3001, () => {
-    // console.log(__dirname);
     console.log(`App Started on PORT ${process.env.PORT || 3001}`);
 });
 
