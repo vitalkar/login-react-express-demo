@@ -1,6 +1,7 @@
 
 const express = require('express');
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const redis = require('redis');
 const passport = require('passport');
@@ -30,6 +31,7 @@ const sessionOptions = {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(cors());
 
 app.use(session(sessionOptions));
@@ -44,30 +46,40 @@ app.use('*', (req, res, next) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.serializeUser(function (user, done) {
-    done(null, user._id);
-});
+// passport.serializeUser((user, done) => {
+//     done(null, user);
+// });
 
-passport.deserializeUser(function (userId, done) {
-    User.findById(userId, (err, user) => done(err, user));
-});
+// passport.deserializeUser((email, done) => {
+//     User.findOne({ email }, (err, user) => done(err, user));
+// });
 
-// Passport Local
-const local = new LocalStrategy((email, password, done) => {
-    User.findOne({ email })
-        .then(user => {
-            if (!user || !user.validPassword(password)) {
-                done(null, false, { message: "Invalid username/password" });
-            } else {
-                done(null, user);
-            }
-        })
-        .catch(e => done(e));
-});
-passport.use("local", local);
+// const local = new LocalStrategy({
+
+//         usernameField: 'email',
+//         passwordField: 'password',
+//         passReqToCallback: true
+    
+//     }, (req, email, password, done) => {
+//     User.findOne({ email })
+//         .then((user) => {
+//             console.log(user);
+//             if (!user || !user.validPassword(password) ) {
+//                 console.log('failure')
+//                 done(null, false, { message: "Invalid email/password" });
+//             } else {
+//                 console.log('success')
+//                 done(null, user);
+//             }
+//         })
+//         .catch(e => done(e));
+// });
+
+// passport.use("local", local);
+
+require('./config/passport')(passport);
 
 // Routes
-
 app.use('/api', require('./routes')(passport));
 
 app.listen(process.env.PORT || 3001, () => {
