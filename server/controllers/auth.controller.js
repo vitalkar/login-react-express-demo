@@ -2,10 +2,15 @@ const User = require('../models/User');
 const bcrypt = require('bcrypt');
 
 exports.handleLogin = async (req, res, next) => {
-    console.log('login()');
-    console.log(req.body);
-    const result = await User.find({});
-    return res.status(200).json(result);
+
+    if (req.user) {
+        console.log(req.session.passport);
+        console.log();
+        // req.session.id = req.user._id;
+        return res.status(200).json({result: req.user.email});
+    } else {
+        return res.status(404).json({result: 'user not found'});
+    }
 }
 
 exports.handleRegister = async (req, res, next) => {
@@ -19,26 +24,7 @@ exports.handleRegister = async (req, res, next) => {
         console.log('empty email or password');
         return;
     }
-
-    bcrypt.hash(password, 10, (err, hash) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        
-        // Store hash in your password DB.
-        const newUser = new User({ email, hash });
-        
-        newUser.save((err, result) => {
-            if (err) {
-                console.log(err);
-                return;
-            }
-            console.log('success');
-            console.log(result);
-            return;
-        });
-    });
+    return;
 }
 
 exports.handleLogout = async (req, res, next) => {
